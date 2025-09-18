@@ -1,10 +1,10 @@
 # --- Session Management Routes ---
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session,joinedload
 from typing import List
 from datetime import datetime, timezone
 
-from app.core.security import get_current_admin
+from app.core.security import get_current_admin,get_current_user
 from app.database.models.user import User
 from app.database.session import get_db
 from app.database.models.session import Session as SessionModel
@@ -14,16 +14,24 @@ from app.services.log_service import log_activity
 
 router = APIRouter(prefix="/sessions", tags=["Sessions"])
 
-# --- List all active sessions (user view)
+# --- List all sessions
 @router.get("/", response_model=List[SessionOut])
 def list_sessions(db: Session = Depends(get_db)):
-    return db.query(SessionModel).filter(SessionModel.is_active == True).all()
+    return db.query(SessionModel)
+
+# --- User: List own sessions
+@router.get("/my", response_model=List[SessionOut])
+def list_my_sessions(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return db.query(SessionModel).filter(SessionModel.user_id == current_user.id).all()
 
 # --- Admin: List all sessions
 @router.get("/admin", response_model=List[SessionOut])
 def list_all_sessions(db: Session = Depends(get_db), admin=Depends(get_current_admin)):
-    return db.query(SessionModel).all()
-
+    sessions= db.query(SessionModel).options(joinedload(SessionModel.user)).all()
+    return sessions
 # --- Admin: Manually revoke a session by ID
 @router.post("/admin/revoke/{session_id}")
 def revoke_session(session_id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):

@@ -16,6 +16,11 @@ class UserCreate(UserBase):
 class UserOut(UserBase):
     id: int
     is_admin: bool
+    username:str
 
     # --- allow ORM models to be converted to this schema
     model_config = ConfigDict(from_attributes=True)
+# for the login to make sure it accepts json
+class LoginInput(BaseModel):
+    email: str
+    password: str

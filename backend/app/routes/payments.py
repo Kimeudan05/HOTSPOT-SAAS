@@ -11,6 +11,7 @@ from app.schemas.payment import PaymentOut
 from app.services.mpesa_services import stk_push
 from app.services.billing import create_session
 from app.database.models.user import User
+from app.database.models.plan import Plan
 from app.core.security import get_current_user, get_current_admin
 from app.services.email_service import send_email
 from app.services.sms_service import send_sms
@@ -54,9 +55,10 @@ async def mpesa_callback(request: Request, db: Session = Depends(get_db)):
         status = "Success" if result_code == 0 else "Failed"
 
         user = db.query(User).filter(User.phone_number == phone_number).first()
-
+        plan = db.query(Plan).filter(Plan.price == amount).first()
         payment = Payment(
             user_id=user.id if user else None,
+            plan_id=plan.id if plan else None,
             phone_number=phone_number or "Unknown",
             amount=amount or 0,
             mpesa_receipt=receipt,
@@ -166,10 +168,51 @@ def payment_summary(db: Session = Depends(get_db)):
 
 # --- List current user's payments (admin sees all)
 @router.get("/my", response_model=List[PaymentOut])
-def my_payments(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.is_admin:
-        return db.query(Payment).all()
-    return db.query(Payment).filter(Payment.user_id == current_user.id).all()
+# --- List current user's payments (with optional filters, sorting, pagination)
+@router.get("/my", response_model=List[PaymentOut])
+def my_payments(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    status: Optional[str] = Query(None),
+    min_amount: Optional[float] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+    page: int = 1,
+    page_size: int = 10
+):
+    query = db.query(Payment)
+
+    # Restrict to current user unless admin
+    if not current_user.is_admin:
+        query = query.filter(Payment.user_id == current_user.id)
+
+    if status:
+        query = query.filter(Payment.status == status)
+    if min_amount:
+        query = query.filter(Payment.amount >= min_amount)
+
+    if start_date:
+        try:
+            start = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(Payment.created_at >= start)
+        except ValueError:
+            pass
+
+    if end_date:
+        try:
+            end = datetime.strptime(end_date, "%Y-%m-%d")
+            query = query.filter(Payment.created_at <= end)
+        except ValueError:
+            pass
+
+    sort_column = getattr(Payment, sort_by, Payment.created_at)
+    query = query.order_by(sort_column.asc() if sort_order == "asc" else sort_column.desc())
+
+    payments = query.offset((page - 1) * page_size).limit(page_size).all()
+    return payments
+
 
 # --- Admin: list all payments
 @router.get("/admin", response_model=List[PaymentOut])

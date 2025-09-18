@@ -1,3 +1,74 @@
-virtual_env/
-*.env
-hotspot/backend/tests/
+# ----------------------
+# Python / FastAPI
+# ----------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+
+# Virtual environments
+.env
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+*.out
+*.err
+
+# Migrations (if using Alembic, keep only versions/*.py you need)
+alembic.ini
+migrations/
+
+# ----------------------
+# Node / React (frontend)
+# ----------------------
+node_modules/
+dist/
+build/
+*.local
+
+# Cache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ----------------------
+# OS files
+# ----------------------
+.DS_Store
+Thumbs.db
+
+# ----------------------
+# Docker
+# ----------------------
+*.pid
+*.seed
+docker-compose.override.yml
+
+# ----------------------
+# Secrets
+# ----------------------
+.env            # ✅ all API keys, database credentials
+.env.local
+
+#tests
+hotspot/backend/tests/__pycache__/
+hotspot/backend/tests/ 
+backend/tests/
+.pytest_cache/
+.coverage

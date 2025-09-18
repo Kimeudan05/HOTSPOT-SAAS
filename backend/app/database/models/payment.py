@@ -13,7 +13,8 @@ class Payment(Base):
     
     # --- FK to user who made the payment
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    
+    # --- FK to plan that was purchased
+    plan_id = Column(Integer, ForeignKey("plans.id"), nullable=True)  # ✅ link to plan
     # --- phone number used in the payment
     phone_number = Column(String, nullable=False)
     
@@ -29,5 +30,6 @@ class Payment(Base):
     # --- timestamp when the payment was made
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
-    # --- relationship to User (reverse: user.payments)
+    # --- relationships to User and plan(reverse: user.payments)
     user = relationship("User", back_populates="payments")
+    plan = relationship("Plan")  # ✅ easy access to plan
