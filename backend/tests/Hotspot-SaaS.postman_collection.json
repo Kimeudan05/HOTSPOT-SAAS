@@ -1,0 +1,154 @@
+{
+  "info": {
+    "name": "Hotspot SaaS (M-Pesa + Billing) - Full Flow",
+    "_postman_id": "12ab34cd-56ef-78gh-90ij-klmn123opqrs",
+    "description": "Run end-to-end SaaS cycle with M-Pesa + Hotspot Billing",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Register Admin",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"admin\",\n  \"email\": \"admin@example.com\",\n  \"password\": \"admin123\",\n  \"phone_number\": \"254700000222\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/register",
+          "host": ["{{base_url}}"],
+          "path": ["auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "2. Login Admin",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let data = pm.response.json();",
+              "if (data.access_token) {",
+              "   pm.environment.set('token', data.access_token);",
+              "   console.log('✅ Token saved to environment:', data.access_token);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{base_url}}/auth/login?email=admin@example.com&password=admin123",
+          "host": ["{{base_url}}"],
+          "path": ["auth", "login"],
+          "query": [
+            { "key": "email", "value": "admin@example.com" },
+            { "key": "password", "value": "admin123" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Create Plan (KES 50 → 30 mins)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"30 mins\",\n  \"price\": 50,\n  \"duration\": 30\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/plans/",
+          "host": ["{{base_url}}"],
+          "path": ["plans", ""]
+        }
+      }
+    },
+    {
+      "name": "4. Register User",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"john\",\n  \"email\": \"john@example.com\",\n  \"password\": \"secret\",\n  \"phone_number\": \"254700000111\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/register",
+          "host": ["{{base_url}}"],
+          "path": ["auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "5. Simulate Payment Callback",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"Body\": {\n    \"stkCallback\": {\n      \"ResultCode\": 0,\n      \"CallbackMetadata\": {\n        \"Item\": [\n          {\"Name\": \"Amount\", \"Value\": 50},\n          {\"Name\": \"MpesaReceiptNumber\", \"Value\": \"ABC123XYZ\"},\n          {\"Name\": \"PhoneNumber\", \"Value\": 254700000111}\n        ]\n      }\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/payments/callback",
+          "host": ["{{base_url}}"],
+          "path": ["payments", "callback"]
+        }
+      }
+    },
+    {
+      "name": "6. User Payments (Admin view)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": {
+          "raw": "{{base_url}}/payments/admin",
+          "host": ["{{base_url}}"],
+          "path": ["payments", "admin"]
+        }
+      }
+    },
+    {
+      "name": "7. Sessions (Admin view)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": {
+          "raw": "{{base_url}}/sessions/admin",
+          "host": ["{{base_url}}"],
+          "path": ["sessions", "admin"]
+        }
+      }
+    },
+    {
+      "name": "8. Analytics - Revenue Summary",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": {
+          "raw": "{{base_url}}/analytics/revenue/summary",
+          "host": ["{{base_url}}"],
+          "path": ["analytics", "revenue", "summary"]
+        }
+      }
+    },
+    {
+      "name": "9. Activity Logs",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": {
+          "raw": "{{base_url}}/activity/",
+          "host": ["{{base_url}}"],
+          "path": ["activity", ""]
+        }
+      }
+    }
+  ]
+}
