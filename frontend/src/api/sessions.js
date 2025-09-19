@@ -6,9 +6,9 @@ export const getMySessions = async () => {
   return res.data;
 };
 
-// Admin sessions
-export const getAllSessions = async () => {
-  const res = await api.get("/sessions/admin");
+// Admin: all sessions with filters + pagination
+export const getAllSessions = async (params = {}) => {
+  const res = await api.get("/sessions/admin", { params });
   return res.data;
 };
 

@@ -167,7 +167,7 @@ def payment_summary(db: Session = Depends(get_db)):
     }
 
 # --- List current user's payments (admin sees all)
-@router.get("/my", response_model=List[PaymentOut])
+# @router.get("/my", response_model=List[PaymentOut])
 # --- List current user's payments (with optional filters, sorting, pagination)
 @router.get("/my", response_model=List[PaymentOut])
 def my_payments(
@@ -216,5 +216,41 @@ def my_payments(
 
 # --- Admin: list all payments
 @router.get("/admin", response_model=List[PaymentOut])
-def list_all_payments(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
-    return db.query(Payment).all()
+def list_all_payments(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+    status: Optional[str] = Query(None),
+    phone_number: Optional[str] = Query(None),
+    min_amount: Optional[float] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+    page: int = 1,
+    page_size: int = 10,
+):
+    query = db.query(Payment)
+
+    # Filters
+    if status:
+        query = query.filter(Payment.status == status)
+    if phone_number:
+        query = query.filter(Payment.phone_number.contains(phone_number))
+    if min_amount:
+        query = query.filter(Payment.amount >= min_amount)
+    if start_date:
+        query = query.filter(Payment.created_at >= start_date)
+    if end_date:
+        query = query.filter(Payment.created_at <= end_date)
+
+    # Sorting
+    sort_column = getattr(Payment, sort_by, Payment.created_at)
+    if sort_order == "asc":
+        query = query.order_by(sort_column.asc())
+    else:
+        query = query.order_by(sort_column.desc())
+
+    total = query.count()
+    payments = query.offset((page - 1) * page_size).limit(page_size).all()
+
+    return {"data": payments, "total": total}

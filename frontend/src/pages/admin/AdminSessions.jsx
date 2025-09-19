@@ -1,19 +1,60 @@
 import { useEffect, useState } from "react";
 import { getAllSessions, revokeSession } from "../../api/sessions";
-import Table from "../../components/Table";
+import { getPlans } from "../../api/plans"; // You need this API call to fetch plans dynamically
 
 export default function AdminSessions() {
   const [sessions, setSessions] = useState([]);
+  const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Filters
+  const [phoneFilter, setPhoneFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [planFilter, setPlanFilter] = useState("");
+
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1); // optional, if backend provides it
+  const pageSize = 10;
+
+  useEffect(() => {
+    fetchPlans();
+  }, []);
 
   useEffect(() => {
     fetchSessions();
-  }, []);
+  }, [phoneFilter, statusFilter, planFilter, page]);
+
+  const fetchPlans = async () => {
+    try {
+      const data = await getPlans();
+      setPlans(data);
+    } catch (err) {
+      console.error("Failed to fetch plans", err);
+    }
+  };
 
   const fetchSessions = async () => {
+    setLoading(true);
     try {
-      const data = await getAllSessions();
-      setSessions(data);
+      const data = await getAllSessions({
+        phone_number: phoneFilter || undefined,
+        status: statusFilter || undefined,
+        plan_name: planFilter || undefined,
+        page,
+        page_size: pageSize,
+      });
+
+      // If backend returns total, extract it
+      // If not, just use the sessions list
+      if (Array.isArray(data)) {
+        setSessions(data);
+      } else {
+        setSessions(data.sessions || []);
+        if (data.total) {
+          setTotalPages(Math.ceil(data.total / pageSize));
+        }
+      }
     } catch (err) {
       console.error("Failed to fetch sessions", err);
     } finally {
@@ -34,11 +75,59 @@ export default function AdminSessions() {
     }
   };
 
+  // Mask phone number: 254******123
+  const maskPhone = (phone) => {
+    if (!phone || phone.length < 6) return phone;
+    return phone.slice(0, 3) + "******" + phone.slice(-3);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <div className="max-w-7xl mx-auto py-10 px-4">
         <h2 className="text-3xl font-bold mb-6">All Sessions (Admin)</h2>
 
+        {/* Filters */}
+        <div className="flex flex-wrap gap-4 mb-6">
+          <input
+            type="text"
+            placeholder="Filter by phone"
+            value={phoneFilter}
+            onChange={(e) => {
+              setPhoneFilter(e.target.value);
+              setPage(1);
+            }}
+            className="border p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
+            className="border p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
+          >
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="expired">Expired</option>
+          </select>
+          <select
+            value={planFilter}
+            onChange={(e) => {
+              setPlanFilter(e.target.value);
+              setPage(1);
+            }}
+            className="border p-2 rounded bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600"
+          >
+            <option value="">All Plans</option>
+            {plans.map((plan) => (
+              <option key={plan.id} value={plan.name}>
+                {plan.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Table */}
         {loading ? (
           <p className="text-center">Loading sessions...</p>
         ) : sessions.length === 0 ? (
@@ -68,7 +157,7 @@ export default function AdminSessions() {
                     <td className="px-4 py-2">{s.id}</td>
                     <td className="px-4 py-2">{s.user?.id ?? "N/A"}</td>
                     <td className="px-4 py-2">{s.user?.username ?? "N/A"}</td>
-                    <td className="px-4 py-2">{s.phone_number}</td>
+                    <td className="px-4 py-2">{maskPhone(s.phone_number)}</td>
                     <td className="px-4 py-2">{s.plan_name}</td>
                     <td className="px-4 py-2">
                       {new Date(s.start_time).toLocaleString()}
@@ -95,6 +184,26 @@ export default function AdminSessions() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {sessions.length > 0 && (
+          <div className="flex justify-center items-center gap-4 mt-6">
+            <button
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 bg-gray-300 dark:bg-gray-700 rounded disabled:opacity-50"
+            >
+              Prev
+            </button>
+            <span>Page {page}</span>
+            <button
+              onClick={() => setPage((prev) => prev + 1)}
+              className="px-3 py-1 bg-gray-300 dark:bg-gray-700 rounded"
+            >
+              Next
+            </button>
           </div>
         )}
       </div>

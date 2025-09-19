@@ -1,8 +1,9 @@
 # --- Session Management Routes ---
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,Query
 from sqlalchemy.orm import Session,joinedload
-from typing import List
+from typing import List,Optional
 from datetime import datetime, timezone
+from fastapi.responses import JSONResponse
 
 from app.core.security import get_current_admin,get_current_user
 from app.database.models.user import User
@@ -29,8 +30,31 @@ def list_my_sessions(
 
 # --- Admin: List all sessions
 @router.get("/admin", response_model=List[SessionOut])
-def list_all_sessions(db: Session = Depends(get_db), admin=Depends(get_current_admin)):
-    sessions= db.query(SessionModel).options(joinedload(SessionModel.user)).all()
+def list_all_sessions(
+    db: Session = Depends(get_db),
+    admin=Depends(get_current_admin),
+    phone_number: Optional[str] = Query(None),
+    status: Optional[str] = Query(None, description="active or expired"),
+    plan_name: Optional[str] = Query(None),
+    page: int = 1,
+    page_size: int = 10,
+):
+    query = db.query(SessionModel)
+
+    # Filters
+    if phone_number:
+        query = query.filter(SessionModel.phone_number.contains(phone_number))
+    if status:
+        if status == "active":
+            query = query.filter(SessionModel.is_active == True)
+        elif status == "expired":
+            query = query.filter(SessionModel.is_active == False)
+    if plan_name:
+        query = query.filter(SessionModel.plan_name == plan_name)
+
+    total = query.count()
+    sessions = query.offset((page - 1) * page_size).limit(page_size).all()
+
     return sessions
 # --- Admin: Manually revoke a session by ID
 @router.post("/admin/revoke/{session_id}")

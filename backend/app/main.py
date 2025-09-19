@@ -20,8 +20,8 @@ app = FastAPI()
 # Add CORS middleware to allow cross-origin requests (adjust origins for production)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # TODO: restrict this to trusted domains in production
-    # allow_origins=["*"],  # TODO: restrict this to trusted domains in production
+    # allow_origins=["http://localhost:5173"],  # TODO: restrict this to trusted domains in production
+    allow_origins=["*"],  # TODO: restrict this to trusted domains in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
